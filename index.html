@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Resource Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(26, 26, 46, 0.6);
+            --bg-card-hover: rgba(30, 30, 55, 0.8);
+            --accent-cyan: #00d4ff;
+            --accent-purple: #7c3aed;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 212, 255, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .header {
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            font-size: 2rem;
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status-section {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (min-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        .resource-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .resource-card:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Gauge Styles */
+        .gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .gauge {
+            position: relative;
+            width: 140px;
+            height: 70px;
+            overflow: hidden;
+        }
+
+        .gauge-background {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: conic-gradient(from 180deg, rgba(255, 255, 255, 0.1) 0deg, rgba(255, 255, 255, 0.05) 180deg);
+            clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%);
+            transform: rotate(180deg);
+        }
+
+        .gauge-fill {
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 50%);
+            transform-origin: 50% 50%;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gauge-cover {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            background: var(--bg-secondary);
+            border-radius: 100px 100px 0 0;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 8px;
+        }
+
+        .gauge-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .gauge-unit {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .chart-container {
+            height: 80px;
+            margin-top: 1rem;
+        }
+
+        .card-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-value {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Network Card */
+        .network-section {
+            grid-column: span 2;
+        }
+
+        .speed-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .speed-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .speed-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .arrow {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .arrow.upload {
+            color: #f59e0b;
+        }
+
+        .arrow.download {
+            color: #10b981;
+        }
+
+        .speed-bar-container {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .speed-bar {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .upload-bar {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .download-bar {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .speed-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Report Section */
+        .report-section {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .report-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .report-btn {
+            padding: 0.875rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .report-btn.primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: #000;
+        }
+
+        .report-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .report-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .report-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-cyan);
+        }
+
+        .tracking-info {
+            text-align: center;
+        }
+
+        .tracking-timer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tracking-time {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'Courier New', monospace;
+        }
+
+        .tracking-progress {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .tracking-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            border-radius: 3px;
+            transition: width 1s linear;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo-section">
+                <span class="logo-icon">📊</span>
+                <h1 class="title">System Resource Monitor</h1>
+            </div>
+            <div class="status-section">
+                <span class="status-dot"></span>
+                <span>Live Simulation</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="dashboard-grid" id="dashboard">
+            <!-- CPU Card -->
+            <div class="resource-card" id="cpu-card">
+                <div class="card-header">
+                    <span class="card-icon">🖥️</span>
+                    <h3 class="card-title">CPU</h3>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-background"></div>
+                        <div class="gauge-fill" id="cpu-gauge" style="background: #00d4ff;"></div>
+                        <div class="gauge-cover">
+                            <span class="gauge-value" id="cpu-value" style="color: #00d4ff;">0.0</span>
+                            <span class="gauge-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cpu-chart"></canvas>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Cores</span>
+                        <span class="detail-value">8 / 16 threads</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Frequency</span>
+                        <span class="detail-value" id="cpu-freq">3200 MHz</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPU Card -->
+            <div class="resource-card" id="gpu-card">
+                <div class="card-header">
+                    <span class="card-icon">🎮</span>
+                    <h3 class="card-title">GPU</h3>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-background"></div>
+                        <div class="gauge-fill" id="gpu-gauge" style="background: #7c3aed;"></div>
+                        <div class="gauge-cover">
+                            <span class="gauge-value" id="gpu-value" style="color: #7c3aed;">0.0</span>
+                            <span class="gauge-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="gpu-chart"></canvas>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Name</span>
+                        <span class="detail-value">NVIDIA RTX 4070</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Temperature</span>
+                        <span class="detail-value" id="gpu-temp">45°C</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Card -->
+            <div class="resource-card" id="memory-card">
+                <div class="card-header">
+                    <span class="card-icon">🧠</span>
+                    <h3 class="card-title">Memory</h3>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-background"></div>
+                        <div class="gauge-fill" id="memory-gauge" style="background: #ec4899;"></div>
+                        <div class="gauge-cover">
+                            <span class="gauge-value" id="memory-value" style="color: #ec4899;">0.0</span>
+                            <span class="gauge-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="memory-chart"></canvas>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Used</span>
+                        <span class="detail-value" id="memory-used">8.5 GB</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Total</span>
+                        <span class="detail-value">32 GB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disk Card -->
+            <div class="resource-card" id="disk-card">
+                <div class="card-header">
+                    <span class="card-icon">💾</span>
+                    <h3 class="card-title">Disk</h3>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge">
+                        <div class="gauge-background"></div>
+                        <div class="gauge-fill" id="disk-gauge" style="background: #f59e0b;"></div>
+                        <div class="gauge-cover">
+                            <span class="gauge-value" id="disk-value" style="color: #f59e0b;">0.0</span>
+                            <span class="gauge-unit">%</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="disk-chart"></canvas>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Drive</span>
+                        <span class="detail-value">C:</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Used</span>
+                        <span class="detail-value" id="disk-used">256 / 512 GB</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Card -->
+            <div class="resource-card network-section" id="network-card">
+                <div class="card-header">
+                    <span class="card-icon">🌐</span>
+                    <h3 class="card-title">Network</h3>
+                </div>
+                <div class="speed-section">
+                    <div class="speed-item">
+                        <div class="speed-label">
+                            <span class="arrow upload">↑</span>
+                            <span>Upload</span>
+                        </div>
+                        <div class="speed-bar-container">
+                            <div class="speed-bar upload-bar" id="upload-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="speed-value" id="upload-speed">0.00 MB/s</div>
+                    </div>
+                    <div class="speed-item">
+                        <div class="speed-label">
+                            <span class="arrow download">↓</span>
+                            <span>Download</span>
+                        </div>
+                        <div class="speed-bar-container">
+                            <div class="speed-bar download-bar" id="download-bar" style="width: 0%;"></div>
+                        </div>
+                        <div class="speed-value" id="download-speed">0.00 MB/s</div>
+                    </div>
+                </div>
+                <div class="card-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Total Sent</span>
+                        <span class="detail-value" id="total-sent">1.25 GB</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Total Received</span>
+                        <span class="detail-value" id="total-recv">15.8 GB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Section -->
+        <div class="report-section" id="report-section">
+            <div class="report-buttons" id="report-buttons">
+                <button class="report-btn primary" onclick="startTracking()">
+                    📄 5분 추적 후 리포트 생성
+                </button>
+                <button class="report-btn secondary" onclick="generateQuickReport()">
+                    ⚡ 현재 데이터로 즉시 생성
+                </button>
+            </div>
+            <div class="tracking-info" id="tracking-info" style="display: none;">
+                <div class="tracking-timer">
+                    <span class="tracking-label">데이터 수집 중...</span>
+                    <span class="tracking-time" id="tracking-time">5:00</span>
+                </div>
+                <div class="tracking-progress">
+                    <div class="tracking-bar" id="tracking-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>System Resource Monitor v1.0 - Demo Mode</p>
+    </footer>
+
+    <script>
+        // Data history
+        const history = {
+            cpu: [],
+            gpu: [],
+            memory: [],
+            disk: []
+        };
+        const MAX_POINTS = 60;
+        let fullHistory = [];
+
+        // Chart configurations
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                            font: { size: 10 },
+                            stepSize: 50
+                        }
+                    }
+                }
+            }
+        };
+
+        // Initialize charts
+        const charts = {};
+
+        function createChart(id, color) {
+            const ctx = document.getElementById(id).getContext('2d');
+            return new Chart(ctx, {
+                ...chartConfig,
+                data: {
+                    labels: Array(MAX_POINTS).fill(''),
+                    datasets: [{
+                        data: [],
+                        fill: true,
+                        backgroundColor: color + '20',
+                        borderColor: color,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4
+                    }]
+                }
+            });
+        }
+
+        charts.cpu = createChart('cpu-chart', '#00d4ff');
+        charts.gpu = createChart('gpu-chart', '#7c3aed');
+        charts.memory = createChart('memory-chart', '#ec4899');
+        charts.disk = createChart('disk-chart', '#f59e0b');
+
+        // Get color based on value
+        function getColor(value, defaultColor) {
+            if (value >= 90) return '#ef4444';
+            if (value >= 70) return '#f59e0b';
+            return defaultColor;
+        }
+
+        // Update gauge
+        function updateGauge(id, value, defaultColor) {
+            const color = getColor(value, defaultColor);
+            const rotation = (value / 100) * 180;
+            document.getElementById(id + '-gauge').style.transform = `rotate(${rotation}deg)`;
+            document.getElementById(id + '-gauge').style.background = color;
+            document.getElementById(id + '-value').textContent = value.toFixed(1);
+            document.getElementById(id + '-value').style.color = color;
+        }
+
+        // Update chart
+        function updateChart(chart, data) {
+            chart.data.datasets[0].data = data;
+            chart.data.labels = data.map((_, i) => i);
+            chart.update('none');
+        }
+
+        // Simulate data
+        function simulateData() {
+            const now = Date.now();
+
+            // Generate realistic-looking data with some variation
+            const cpuBase = 25 + Math.sin(now / 5000) * 15;
+            const cpu = Math.max(5, Math.min(95, cpuBase + (Math.random() - 0.5) * 20));
+
+            const gpuBase = 15 + Math.sin(now / 8000) * 10;
+            const gpu = Math.max(5, Math.min(90, gpuBase + (Math.random() - 0.5) * 15));
+
+            const memBase = 55 + Math.sin(now / 10000) * 5;
+            const memory = Math.max(40, Math.min(80, memBase + (Math.random() - 0.5) * 8));
+
+            const disk = 50 + Math.sin(now / 20000) * 2 + (Math.random() - 0.5) * 1;
+
+            const uploadSpeed = Math.max(0, (Math.random() * 2).toFixed(2));
+            const downloadSpeed = Math.max(0, (Math.random() * 8).toFixed(2));
+
+            return { cpu, gpu, memory, disk, uploadSpeed, downloadSpeed, timestamp: new Date().toISOString() };
+        }
+
+        // Update UI
+        function updateUI() {
+            const data = simulateData();
+
+            // Update histories
+            history.cpu.push(data.cpu);
+            history.gpu.push(data.gpu);
+            history.memory.push(data.memory);
+            history.disk.push(data.disk);
+
+            // Trim to max points
+            Object.keys(history).forEach(key => {
+                if (history[key].length > MAX_POINTS) history[key].shift();
+            });
+
+            // Store full history for report
+            fullHistory.push(data);
+            if (fullHistory.length > 300) fullHistory.shift();
+
+            // Update gauges
+            updateGauge('cpu', data.cpu, '#00d4ff');
+            updateGauge('gpu', data.gpu, '#7c3aed');
+            updateGauge('memory', data.memory, '#ec4899');
+            updateGauge('disk', data.disk, '#f59e0b');
+
+            // Update charts
+            updateChart(charts.cpu, history.cpu);
+            updateChart(charts.gpu, history.gpu);
+            updateChart(charts.memory, history.memory);
+            updateChart(charts.disk, history.disk);
+
+            // Update details
+            document.getElementById('cpu-freq').textContent = (3000 + Math.random() * 500).toFixed(0) + ' MHz';
+            document.getElementById('gpu-temp').textContent = (45 + Math.random() * 15).toFixed(0) + '°C';
+            document.getElementById('memory-used').textContent = (data.memory * 0.32).toFixed(1) + ' GB';
+
+            // Update network
+            document.getElementById('upload-speed').textContent = data.uploadSpeed + ' MB/s';
+            document.getElementById('download-speed').textContent = data.downloadSpeed + ' MB/s';
+            document.getElementById('upload-bar').style.width = Math.min(100, data.uploadSpeed * 20) + '%';
+            document.getElementById('download-bar').style.width = Math.min(100, data.downloadSpeed * 10) + '%';
+        }
+
+        // Start tracking for 5 minutes
+        let trackingInterval = null;
+        let trackingTimeout = null;
+
+        function startTracking() {
+            document.getElementById('report-buttons').style.display = 'none';
+            document.getElementById('tracking-info').style.display = 'block';
+
+            let remaining = 300; // 5 minutes
+            fullHistory = []; // Clear history
+
+            trackingInterval = setInterval(() => {
+                remaining--;
+                const min = Math.floor(remaining / 60);
+                const sec = remaining % 60;
+                document.getElementById('tracking-time').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+                document.getElementById('tracking-bar').style.width = ((300 - remaining) / 300 * 100) + '%';
+
+                if (remaining <= 0) {
+                    clearInterval(trackingInterval);
+                    generateReport();
+                    resetTracking();
+                }
+            }, 1000);
+        }
+
+        function resetTracking() {
+            document.getElementById('report-buttons').style.display = 'flex';
+            document.getElementById('tracking-info').style.display = 'none';
+            document.getElementById('tracking-time').textContent = '5:00';
+            document.getElementById('tracking-bar').style.width = '0%';
+        }
+
+        // Generate PDF report
+        async function generateReport() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            let y = 15;
+
+            // Title
+            pdf.setFontSize(22);
+            pdf.setTextColor(0, 150, 255);
+            pdf.text('System Resource Monitor Report', pageWidth / 2, y, { align: 'center' });
+            y += 12;
+
+            // Date
+            pdf.setFontSize(10);
+            pdf.setTextColor(100);
+            pdf.text(`Generated: ${new Date().toLocaleString('ko-KR')}`, pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            pdf.text(`Data Points: ${fullHistory.length} seconds`, pageWidth / 2, y, { align: 'center' });
+            y += 12;
+
+            // Calculate stats
+            const stats = calculateStats();
+
+            // CPU Section
+            pdf.setFontSize(14);
+            pdf.setTextColor(0, 212, 255);
+            pdf.text('CPU Usage', 15, y);
+            y += 8;
+            addStatsTable(pdf, stats.cpu, y);
+            y += 15;
+
+            // GPU Section
+            pdf.setTextColor(124, 58, 237);
+            pdf.text('GPU Usage', 15, y);
+            y += 8;
+            addStatsTable(pdf, stats.gpu, y);
+            y += 15;
+
+            // Memory Section
+            pdf.setTextColor(236, 72, 153);
+            pdf.text('Memory Usage', 15, y);
+            y += 8;
+            addStatsTable(pdf, stats.memory, y);
+            y += 15;
+
+            // Disk Section
+            pdf.setTextColor(245, 158, 11);
+            pdf.text('Disk Usage', 15, y);
+            y += 8;
+            addStatsTable(pdf, stats.disk, y);
+            y += 20;
+
+            // Capture dashboard screenshot
+            try {
+                const dashboard = document.getElementById('dashboard');
+                const canvas = await html2canvas(dashboard, {
+                    backgroundColor: '#0a0a0f',
+                    scale: 1.5
+                });
+
+                pdf.addPage();
+                pdf.setFontSize(16);
+                pdf.setTextColor(0, 150, 255);
+                pdf.text('Dashboard Screenshot', 15, 15);
+
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = pageWidth - 30;
+                const imgHeight = (canvas.height / canvas.width) * imgWidth;
+                pdf.addImage(imgData, 'PNG', 15, 25, imgWidth, Math.min(imgHeight, 250));
+            } catch (e) {
+                console.error('Screenshot failed:', e);
+            }
+
+            // Save PDF
+            pdf.save(`system_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+        }
+
+        function calculateStats() {
+            const calc = (arr) => ({
+                avg: arr.reduce((a, b) => a + b, 0) / arr.length,
+                max: Math.max(...arr),
+                min: Math.min(...arr),
+                current: arr[arr.length - 1]
+            });
+
+            return {
+                cpu: calc(fullHistory.map(d => d.cpu)),
+                gpu: calc(fullHistory.map(d => d.gpu)),
+                memory: calc(fullHistory.map(d => d.memory)),
+                disk: calc(fullHistory.map(d => d.disk))
+            };
+        }
+
+        function addStatsTable(pdf, stats, y) {
+            pdf.setFontSize(10);
+            pdf.setTextColor(60);
+            const col = 45;
+            pdf.text(`Current: ${stats.current.toFixed(1)}%`, 15, y);
+            pdf.text(`Average: ${stats.avg.toFixed(1)}%`, 15 + col, y);
+            pdf.text(`Maximum: ${stats.max.toFixed(1)}%`, 15 + col * 2, y);
+            pdf.text(`Minimum: ${stats.min.toFixed(1)}%`, 15 + col * 3, y);
+        }
+
+        function generateQuickReport() {
+            if (fullHistory.length < 10) {
+                alert('최소 10초 이상의 데이터가 필요합니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            generateReport();
+        }
+
+        // Start simulation
+        setInterval(updateUI, 1000);
+        updateUI();
+    </script>
+</body>
+
+</html>
