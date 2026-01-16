@@ -1,0 +1,74 @@
+.gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.gauge {
+    position: relative;
+    width: 140px;
+    height: 70px;
+    overflow: hidden;
+}
+
+.gauge-background {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg,
+            rgba(255, 255, 255, 0.1) 0deg,
+            rgba(255, 255, 255, 0.05) 180deg);
+    clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%);
+    transform: rotate(180deg);
+}
+
+.gauge-fill {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: #00d4ff;
+    clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 50%);
+    transform-origin: 50% 50%;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 20px currentColor;
+}
+
+.gauge-cover {
+    position: absolute;
+    width: 100px;
+    height: 50px;
+    background: var(--bg-secondary);
+    border-radius: 100px 100px 0 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 8px;
+}
+
+.gauge-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.gauge-unit {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.gauge-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

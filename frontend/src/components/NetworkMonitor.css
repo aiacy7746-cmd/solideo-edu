@@ -1,0 +1,163 @@
+.network-monitor {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.network-monitor:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(16, 185, 129, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
+}
+
+.network-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.network-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+
+.network-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.speed-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.speed-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.speed-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.arrow {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.arrow.upload {
+    color: #f59e0b;
+}
+
+.arrow.download {
+    color: #10b981;
+}
+
+.speed-bar-container {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.speed-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.upload-bar {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.download-bar {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.speed-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.total-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.total-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.total-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.total-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.interfaces-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.interfaces-title {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.interface-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    font-size: 0.8rem;
+}
+
+.interface-name {
+    color: var(--text-secondary);
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.interface-ip {
+    color: var(--accent-cyan);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+}
