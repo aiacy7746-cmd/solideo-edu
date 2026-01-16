@@ -4,8 +4,9 @@ import psutil
 
 def get_cpu_info() -> dict:
     """CPU 정보 수집"""
-    cpu_percent = psutil.cpu_percent(interval=None)
-    cpu_percent_per_core = psutil.cpu_percent(interval=None, percpu=True)
+    # interval=0.1로 설정하여 정확한 측정 (None은 이전 호출 이후의 평균 반환)
+    cpu_percent = psutil.cpu_percent(interval=0.1)
+    cpu_percent_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
     cpu_freq = psutil.cpu_freq()
     
     # CPU 온도 (Windows에서는 제한적)
